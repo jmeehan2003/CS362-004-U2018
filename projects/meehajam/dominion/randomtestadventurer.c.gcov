@@ -1,0 +1,214 @@
+        -:    0:Source:randomtestadventurer.c
+        -:    0:Graph:randomtestadventurer.gcno
+        -:    0:Data:randomtestadventurer.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include "dominion.h"
+        -:    2:#include "dominion_helpers.h"
+        -:    3:#include "rngs.h"
+        -:    4:#include <string.h>
+        -:    5:#include <stdlib.h>
+        -:    6:#include <assert.h>
+        -:    7:#include <stdio.h>
+        -:    8:#include <time.h>
+        -:    9:#include <math.h>
+        -:   10:
+        -:   11://global variables
+        -:   12:int cardEffectFail = 0;
+        -:   13:int shuffleFail = 0;
+        -:   14:int drawFail = 0;
+        -:   15:int cardCountFail = 0;
+        -:   16:int treasureCountFail = 0;
+        -:   17:
+        -:   18:void adventurerTest(int, struct gameState*);
+        -:   19:
+        1:   20:int main () 
+        -:   21:{
+        1:   22:    srand(time(NULL));
+        1:   23:    printf("Adventurer Card Random Test\n");
+        1:   24:    int tests = 20000;
+        -:   25:    
+        -:   26:    int numTreasures;
+        -:   27:    int i, n, player;
+        -:   28:    struct gameState game;
+        1:   29:    int treasures[] = {copper,silver,gold};
+        -:   30:
+        -:   31:    // should be at least 3 cards in the deck and each hand
+        1:   32:    int minCards = 3;
+        -:   33:    
+        -:   34:    // randomly initialized the game state
+    20001:   35:    for (n = 0; n < tests; n++) 
+        -:   36:    {
+        -:   37:      // SOURCE: This method to randomly set the gamestate was discussed on the unofficial OSU student CS362 slack channel  
+526020000:   38:      for (i = 0; i < sizeof(struct gameState); i++) 
+        -:   39:      {
+526000000:   40:        ((char*)&game)[i] = floor(Random() * 256);
+        -:   41:      }
+        -:   42:
+        -:   43:      // randomly select values.  Values are not completely random but are values that 
+        -:   44:      // are valid within the game
+    20000:   45:      player = floor(Random() * MAX_PLAYERS);
+    20000:   46:      game.deckCount[player] = floor(Random() * ((MAX_DECK - minCards) + 1) + minCards);
+    20000:   47:      numTreasures = floor(Random() * ((game.deckCount[player] - minCards) + 1) + minCards);
+        -:   48:
+        -:   49:      // make sure each player gets at least treaures cards
+  2566097:   50:      for (i = 0; i < numTreasures; i++) 
+        -:   51:      {
+  2546097:   52:        game.deck[player][i] = treasures[rand() % 3];
+        -:   53:      }
+        -:   54:
+    20000:   55:      game.discardCount[player] = 0;
+    20000:   56:      game.handCount[player] = floor(Random() * ((MAX_HAND - minCards) + 1) + minCards);
+    20000:   57:      game.whoseTurn = player;
+        -:   58:
+        -:   59:      // test the function
+    20000:   60:      adventurerTest(player, &game);
+        -:   61:    }
+        -:   62:
+        2:   63:    int totalFails = cardEffectFail + drawFail + shuffleFail +
+        1:   64:                    cardCountFail + treasureCountFail;
+        -:   65:
+        1:   66:    if (tests - totalFails <= 0) 
+        -:   67:    {
+        1:   68:      printf("Passed Tests: %d\n",0);
+        1:   69:      printf("Failed Tests: %d\n",tests);
+        -:   70:    }
+        -:   71:    else 
+        -:   72:    {
+    #####:   73:      printf("Passed Tests: %d\n",tests - totalFails);
+    #####:   74:      printf("Failed Tests: %d\n",totalFails);
+        -:   75:    }
+        -:   76:
+        1:   77:    if (totalFails == 0) 
+        -:   78:    {
+    #####:   79:        printf ("Random Test Passed: 0 fails\n\n");
+        -:   80:    }
+        -:   81:    else 
+        -:   82:    {
+        1:   83:        printf("\nBug Report:\n");
+        1:   84:         printf("Shuffle failed: %d\n",shuffleFail);
+        1:   85:        printf("DrawCard failed: %d\n",drawFail);
+        1:   86:        printf("Hand and/or Deck Count failed: %d\n",cardCountFail);
+        1:   87:        printf("CardEffect failed: %d\n",cardEffectFail);
+        1:   88:        printf("Treasure Count failed: %d\n",treasureCountFail);
+        -:   89:        
+        -:   90:    }
+        1:   91:    return 0;
+        -:   92:}
+        -:   93:
+        -:   94:// adventurerCard random tester
+    20000:   95:void adventurerTest(int plyr, struct gameState *final) {
+    20000:   96:    int i, t, j = 0, bonus = 0;
+    20000:   97:    int treasureEnd = 0, treasureStart = 0;
+        -:   98:    int temphand[MAX_HAND];
+    20000:   99:    int treasuresDrawn = 0;
+        -:  100:    struct gameState start;
+        -:  101:    int cEffect, shuffler;
+        -:  102:    int cardDrawn;
+        -:  103:    int card;
+        -:  104:    int preHandCount, preDiscard, preDeckCount;
+        -:  105:    int handCount, deckCount, discardCount; 
+        -:  106:
+        -:  107:    // get gamestate
+    20000:  108:    memcpy(&start,final,sizeof(struct gameState));
+        -:  109:
+        -:  110:    // call card effect with adventurerCard
+    20000:  111:    cEffect = cardEffect(adventurer,0,0,0,final,0,&bonus);
+        -:  112:
+        -:  113:    // check if cardeffect failed
+    20000:  114:    if (cEffect) 
+        -:  115:    {
+    #####:  116:        cardEffectFail++;
+        -:  117:    }
+        -:  118:
+  2569295:  119:    while(treasuresDrawn < 2) 
+        -:  120:    {
+        -:  121:          
+        -:  122:            // check if deck is empty
+  2529295:  123:            if (start.deckCount[plyr] < 1) 
+        -:  124:            {
+    #####:  125:                    shuffler = shuffle(plyr, &start);
+        -:  126:                    // check shuffle 
+    #####:  127:                    if (shuffler == -1 && start.deckCount[plyr] >= 1) {
+    #####:  128:                      shuffleFail++;
+        -:  129:                    }
+        -:  130:            }
+  2529295:  131:            t = drawCard(plyr, &start);
+        -:  132:
+        -:  133:            // check draw
+  2529295:  134:            if (t == -1 && start.deckCount[plyr] != 0) 
+        -:  135:            {
+    #####:  136:                drawFail++;
+        -:  137:            }
+        -:  138:
+        -:  139:            // check treaures/deck/hand count
+  2529295:  140:            cardDrawn = start.hand[plyr][start.handCount[plyr] - 1];
+  2529295:  141:            if (cardDrawn == copper || cardDrawn == silver || cardDrawn == gold)
+    40000:  142:                    treasuresDrawn++;
+        -:  143:            else{
+  2489295:  144:                    temphand[j] = cardDrawn;
+  2489295:  145:                    start.handCount[plyr]--; 
+  2489295:  146:                    j++;
+        -:  147:            }
+        -:  148:    }
+        -:  149:
+        -:  150:
+  2529295:  151:    while(j - 1 >= 0) 
+        -:  152:    {
+  2489295:  153:            start.discard[plyr][start.discardCount[plyr]++] = temphand[j - 1]; 
+  2489295:  154:            j = j - 1;
+        -:  155:    }
+        -:  156:
+        -:  157:
+        -:  158:
+        -:  159:    // get starting treasure count
+  5082115:  160:    for (i = 0; i < start.handCount[plyr]; i++) 
+        -:  161:    {
+  5062115:  162:        card = start.hand[plyr][i];
+  5062115:  163:        if (card == copper || card == silver || card == gold) 
+        -:  164:        {
+    40000:  165:            treasureStart++;
+        -:  166:        }
+        -:  167:    }
+        -:  168:
+        -:  169:    // get final treaure count
+  5082098:  170:    for (i = 0; i < final->handCount[plyr]; i++) 
+        -:  171:    {
+  5062098:  172:        card = final->hand[plyr][i];
+  5062098:  173:        if (card == copper || card == silver || card == gold) 
+        -:  174:        {
+      755:  175:            treasureEnd++;
+        -:  176:        }
+        -:  177:    }
+        -:  178:
+        -:  179:    // get starting treasure count
+  5082115:  180:    for (i = 0; i < start.handCount[plyr]; i++) 
+        -:  181:    {
+  5062115:  182:        card = start.hand[plyr][i];
+  5062115:  183:        if (card == copper || card == silver || card == gold) 
+        -:  184:        {
+    40000:  185:            treasureStart++;
+        -:  186:        }
+        -:  187:    }
+        -:  188:
+        -:  189:    // verify final treasure count equal starting treasure count
+    20000:  190:    if (treasureEnd != treasureStart) 
+        -:  191:    {
+    20000:  192:      treasureCountFail++;
+        -:  193:    }
+        -:  194:    // get starting hand/deck/discard counts
+    20000:  195:    preHandCount = start.handCount[plyr];
+    20000:  196:    preDeckCount = start.deckCount[plyr];
+    20000:  197:    preDiscard = start.discardCount[plyr];
+        -:  198:
+        -:  199:    // get final hand/deck/discard/counts
+    20000:  200:    handCount = final->handCount[plyr];
+    20000:  201:    deckCount = final->deckCount[plyr];
+    20000:  202:    discardCount = final->discardCount[plyr];
+        -:  203:
+        -:  204:    // verify card counts match up
+    20000:  205:    if (!(handCount == preHandCount && deckCount == preDeckCount && discardCount == preDiscard)) 
+        -:  206:    {
+    19825:  207:        cardCountFail++;
+        -:  208:    }
+    20000:  209:}
